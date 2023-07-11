@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/secuiry/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract Dao is ReentrancyGuard, AccessControl{
     bytes32 private immutable CONTRIBUTOR_ROLE = keccak256("CONTRIBUTOR");
@@ -10,7 +10,7 @@ contract Dao is ReentrancyGuard, AccessControl{
     uint256 private MIN_STAKEHOLDER_CONTRIBUTION = 1 ether;
     uint256 private MIN_VOTE_DURATION = 3 minutes;
 
-    uint32 totalPropsals;
+    uint32 totalPropsals; //int keeps track of total no of prop in the dao
     uint256 public daoBalance;
 
     // all the proposals raised (proposal id to data)
@@ -18,7 +18,7 @@ contract Dao is ReentrancyGuard, AccessControl{
     // mapping of votes given by individual stakeholder (individual address to list<proposals voted>)
     mapping(address => uint256[]) private stakholderVotes;
     // voting information about a proposal, (proposal id to voting data)
-    mapping(address => VotedStruct[]) private votedOn;
+    mapping(uint256 => VotedStruct[]) private votedOn;
     mapping(address => uint256) private contributors;
     mapping(address => uint256) private stakeholders;
 
@@ -51,13 +51,13 @@ contract Dao is ReentrancyGuard, AccessControl{
         uint256 amount
     );
 
-    modifier stakholderOnly(sting memory message) {
-        required(hasRole(STAKEHOLDER_ROLE, msg.sender), message);
+    modifier stakeholderOnly(string memory message) {
+        require(hasRole(STAKEHOLDER_ROLE, msg.sender), message);
         _;
     }
 
-    modifier contributroOnly(sting memory message) {
-        required(hasRole(CONTRIBUTOR_ROLE, msg.sender), message);
+    modifier contributroOnly(string memory message) {
+        require(hasRole(CONTRIBUTOR_ROLE, msg.sender), message);
         _;
     }
 
@@ -66,13 +66,13 @@ contract Dao is ReentrancyGuard, AccessControl{
         string memory description,
         address beneficiary,
         uint amount
-    ) external stakholderOnly("propal creation allowed for stakholders only") {
-        uint256 propsalId = totalProposers++;
-        PropalsStruct storage proposal = raisedProposals[proposalId];
+    ) external stakeholderOnly("propal creation allowed for stakholders only") {
+        uint256 proposalId = totalPropsals++;
+        ProposalStruct storage proposal = raisedProposals[proposalId];
 
         proposal.id = proposalId;
-        proposal.propers = payable(msg.sender);
-        proposal.desciption=desciption;
+        proposal.proposer = payable(msg.sender);
+        proposal.description=description;
         proposal.title = title;
         proposal.beneficiary = payable(beneficiary);
         proposal.amount = amount;
@@ -87,27 +87,27 @@ contract Dao is ReentrancyGuard, AccessControl{
         );
     }
 
-    function handleVoting(ProposalStruct storage propsal) private {
+    function handleVoting(ProposalStruct storage proposal) private {
         if(proposal.passed || proposal.duration <= block.timestamp) {
             proposal.passed=true;
             revert("proposal duration expired");
         }
 
         uint256[] memory tempVotes = stakholderVotes[msg.sender];
-        for(uint256 votes=0;votes<tempVotes;votes++) {
-            if(proposal.id == tempVotes[vote]) {
+        for(uint256 votes=0;votes<tempVotes.length;votes++) {
+            if(proposal.id == tempVotes[votes]) {
                 revert("double voting not allowed");
             }
         }
     }
 
     function vote(uint256 propsalId, bool choosen) external stakeholderOnly("Stake holder only permitted") returns (VotedStruct memory){
-        Proposalstruct storage proposal = raisedProposals[propsalId];
+        ProposalStruct storage proposal = raisedProposals[propsalId];
         handleVoting(proposal);
         if(choosen) proposal.upvotes++; else proposal.downvotes++;
 
-        stakholderVotes[msg.sender].push(propsal.id);
-        votesOn[propsalId].push(
+        stakholderVotes[msg.sender].push(proposal.id);
+        votedOn[propsalId].push(
             VotedStruct(
                 msg.sender,
                 block.timestamp,
@@ -177,7 +177,7 @@ contract Dao is ReentrancyGuard, AccessControl{
     }
 
     function getProposals() external view returns(ProposalStruct[] memory proposals) {
-        proposals=new ProposalStruct[totalPropsals];
+        proposals=new ProposalStruct[](totalPropsals);
         for(uint256 i=0;i<totalPropsals;i++) {
             proposals[i] = raisedProposals[i];
         }
@@ -187,15 +187,16 @@ contract Dao is ReentrancyGuard, AccessControl{
         return raisedProposals[proposalId];
     }
 
-    function getVotesOf(uint256 proposalId) public view returns(VotedStruct[] memory) {
+
+    function getVotesOf(uint256 proposalId) external view returns(VotedStruct[] memory) {
         return votedOn[proposalId];
     }
 
-    function getStakeholderVotes() external view stakholderOnly("Unauthorized not a stakeholder") returns(uint256[] memory) {
+    function getStakeholderVotes() external view stakeholderOnly("Unauthorized not a stakeholder") returns(uint256[] memory) {
         return stakholderVotes[msg.sender];
     }
 
-    function getStakeholderBalance() external view stakholderOnly("Unauthorized not a stakeholder") returns(uint256[] memory) {
+    function getStakeholderBalance() external view stakeholderOnly("Unauthorized not a stakeholder") returns(uint256) {
         return stakeholders[msg.sender];
     }
 }
