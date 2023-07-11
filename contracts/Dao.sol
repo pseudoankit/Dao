@@ -175,4 +175,27 @@ contract Dao is ReentrancyGuard, AccessControl{
 
         emit Action(msg.sender, CONTRIBUTOR_ROLE, "Contribution received", address(this), msg.value);
     }
+
+    function getProposals() external view returns(ProposalStruct[] memory proposals) {
+        proposals=new ProposalStruct[totalPropsals];
+        for(uint256 i=0;i<totalPropsals;i++) {
+            proposals[i] = raisedProposals[i];
+        }
+    }
+
+    function getProposal(uint256 proposalId) public view returns(ProposalStruct memory) {
+        return raisedProposals[proposalId];
+    }
+
+    function getVotesOf(uint256 proposalId) public view returns(VotedStruct[] memory) {
+        return votedOn[proposalId];
+    }
+
+    function getStakeholderVotes() external view stakholderOnly("Unauthorized not a stakeholder") returns(uint256[] memory) {
+        return stakholderVotes[msg.sender];
+    }
+
+    function getStakeholderBalance() external view stakholderOnly("Unauthorized not a stakeholder") returns(uint256[] memory) {
+        return stakeholders[msg.sender];
+    }
 }
