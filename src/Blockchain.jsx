@@ -7,6 +7,8 @@ const {etherum} = window;
 window.web3 = new Web3(etherum);
 window.web3 = new Web3(window.web3.currentProvider)
 
+// file to connect web3 with react
+
 const connectWallet = async () => {
     try {
         if(!etherum) return alert("Please install metamask extension in your browser")
@@ -59,7 +61,7 @@ const getEtherumContract = async () => {
     }
 }
 
-const performContribution = async () => {
+const performContribute = async () => {
     try {
         amount = window.web3.utils.toWei(amount.toString(), 'ether')
         const contract = await getEtherumContract()
@@ -91,3 +93,103 @@ const getInfo = async () => {
     }
 }
 
+const raiseProposal = async ({title, description, beneficiary, amount}) => {
+    try {
+        amount = window.web3.utils.toWei(amount.toString(), 'ether')
+        const contract = await getEtherumContract()
+        const account = getGlobalState('connectedAccount')
+
+        await contract.methods
+            .createProposal(title,description, beneficiary, amount)
+            .send({from: account})
+    } catch(e) {
+        reportError(e)
+    }
+}
+
+const getProposals = async () => {
+    try {
+        if(!etherum) return alert("Please install metamask extension in your browser")
+        const contract = await getEtherumContract()
+        const proposals = await contract.methods.getProposals().call()
+        setGlobalState('proposals', structuredProposals(proposals))
+    } catch(e) {
+        reportError(e)
+    }
+}
+
+const structuredProposals = (proposals) => {
+    return proposals.map((proposal) => ({
+        id : proposal.id,
+        amount : window.web3.utils.fromWei(proposal.amount),
+        title : proposal.title,
+        description : proposal.description,
+        paid : proposal.paid,
+        passed : proposal.passed,
+        proposer : proposal.proposer,
+        upvotes : Number(proposal.upvotes),
+        downvotes : Number(proposal.downvotes),
+        beneficiary : proposal.beneficiary,
+        executor : proposal.executor,
+        duration : proposal.duration
+    }))
+}
+
+const getProposal = async(id) => {
+    try {
+        const proposals = getGlobalState('proposals')
+        return proposals.find((proposal) => proposal.id === id)
+    } catch(e) {
+        reportError(e)
+    }
+}
+
+const voteOnProposal = async (proposalId, supported) => {
+    try {
+        const contract = await getEtherumContract()
+        const account = getGlobalState('connectedAccount')
+        await contract.methods.vote(proposalId, supported).send({from: account})
+        window.location.reload()
+    } catch(e) {
+        reportError(e)
+    }
+}
+
+const listVoters = async(id) => {
+    try {
+        const contract = await getEtherumContract()
+        const votes = await contract.methods.getVotesOf(id).call()
+        return votes
+    } catch(e) {
+        reportError(e)
+    }
+}
+
+const payoutBeneficiary = async(id) => {
+    try {
+        const contract = await getEtherumContract()
+        const account = getGlobalState('connectedAccount')
+        await contract.methods.payBeneficiary(id).send({from: account})
+        window.location.reload()
+    } catch(e) {
+        reportError(e)
+    }
+}
+
+const reportError = (e) => {
+    console.log(Json.stringify(e), 'red')
+    throw new Error('No etherum object, something is wrong')
+}
+
+export {
+    isWalletConnected,
+    connectWallet,
+    performContribute,
+    getInfo,
+    raiseProposal,
+    getProposals,
+    getProposal,
+    voteOnProposal,
+    listVoters,
+    payoutBeneficiary
+}
