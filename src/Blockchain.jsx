@@ -1,6 +1,6 @@
 import Web3 from "web3";
 import { setGlobalState, getGlobalState } from "./store";
-import abi from "./abis/DAO.json";
+import abi from "../artifacts/contracts/Dao.sol/Dao.json";
 
 const { ethereum } = window;
 
@@ -51,7 +51,10 @@ const getEthereumContract = async () => {
     const networkId = await web3.eth.net.getId();
     const networkData = await abi.networks[networkId];
     if (networkData) {
-      const contract = new web3.eth.Contract(abi.abi, networkData.address);
+      const contract = new web3.eth.Contract(
+        abi.abi,
+        "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+      );
       return contract;
     } else {
       return null;
