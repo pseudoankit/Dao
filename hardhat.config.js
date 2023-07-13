@@ -1,8 +1,8 @@
 require("@nomicfoundation/hardhat-toolbox");
-
+require("@nomiclabs/hardhat-web3");
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.18",
+  solidity: "0.8.6",
   networks:{
     hardhat:{
       chainId:1337
@@ -11,7 +11,13 @@ module.exports = {
   settings:{
     optimizer:{
       enabled:true,
-      run:200
+      runs:200
     }
-  }
+  },
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./src/abis"
+}
 };

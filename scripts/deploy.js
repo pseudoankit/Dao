@@ -7,9 +7,14 @@
 const hre = require("hardhat");
 
 async function main() {
-  const dao = await (await hre.ethers.getContractFactory("Dao")).deploy()
-  await dao.deployed()
-  console.log(`Dao smart contract deployed to address ${dao.address}`)
+
+  const DAO= await hre.ethers.getContractFactory("DAO");
+  const dao = await DAO.deploy();
+  await dao.deployed();
+
+  console.log(
+    `DAO Smart Contract deployed to ${dao.address}`
+  );
 }
 
 // We recommend this pattern to be able to use async/await everywhere

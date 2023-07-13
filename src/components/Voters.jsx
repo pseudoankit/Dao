@@ -1,6 +1,6 @@
 import React from 'react'
 
-function Voters() {
+const Voters = () => {
   return (
     <div>Voters</div>
   )
