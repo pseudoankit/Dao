@@ -1,36 +1,33 @@
 import Web3 from "web3";
 import { setGlobalState, getGlobalState } from "./store";
-import abi from "./abis/Dao.json";
+import abi from "./abis/DAO.json";
 
-const { etherum } = window;
+const { ethereum } = window;
 
-window.web3 = new Web3(etherum);
+window.web3 = new Web3(ethereum);
 window.web3 = new Web3(window.web3.currentProvider);
-
-// file to connect web3 with react
 
 const connectWallet = async () => {
   try {
-    if (!etherum)
-      return alert("Please install metamask extension in your browser");
-    const accounts = await etherum.request({ methods: "eth_requestAccounts" });
+    if (!ethereum)
+      return alert("Please install Metamask Extension in your browser");
+    const accounts = await ethereum.request({ method: "eth_requestAccounts" });
     setGlobalState("connectedAccount", accounts[0].toLowerCase());
-  } catch (e) {
-    reportError(e);
+  } catch (error) {
+    reportError(error);
   }
 };
 
 const isWalletConnected = async () => {
   try {
-    if (!etherum)
-      return alert("Please install metamask extension in your browser");
-    const accounts = await etherum.request({ methods: "eth_accounts" });
+    if (!ethereum) return alert("please install metamask");
+    const accounts = await ethereum.request({ method: "eth_accounts" });
 
-    window.etherum.on("chainChanged", (chainId) => {
+    window.ethereum.on("chainChanged", (chainId) => {
       window.location.reload();
     });
 
-    window.etherum.on("accountsChanged", async () => {
+    window.ethereum.on("accountsChanged", async () => {
       setGlobalState("connectedAccount", accounts[0].toLowerCase());
       await isWalletConnected();
     });
@@ -38,22 +35,24 @@ const isWalletConnected = async () => {
     if (accounts.length) {
       setGlobalState("connectedAccount", accounts[0].toLowerCase());
     } else {
-      alert("Please connect wallet");
-      console.log("no accounts found");
+      alert("please connect wallet.");
+      console.log("no accounts found.");
     }
-  } catch (e) {
-    reportError(e);
+  } catch (error) {
+    reportError(error);
   }
 };
 
-const getEtherumContract = async () => {
-  const connectedAccount = getGlobalState("connectAccount");
+const getEthereumContract = async () => {
+  const connectedAccount = getGlobalState("connectedAccount");
+
   if (connectedAccount) {
     const web3 = window.web3;
     const networkId = await web3.eth.net.getId();
     const networkData = await abi.networks[networkId];
     if (networkData) {
-      return web3.eth.Contract(abi.abi, networkData.address);
+      const contract = new web3.eth.Contract(abi.abi, networkData.address);
+      return contract;
     } else {
       return null;
     }
@@ -62,68 +61,67 @@ const getEtherumContract = async () => {
   }
 };
 
-const performContribute = async () => {
+const performContribute = async (amount) => {
   try {
     amount = window.web3.utils.toWei(amount.toString(), "ether");
-    const contract = await getEtherumContract();
+    const contract = await getEthereumContract();
     const account = getGlobalState("connectedAccount");
     await contract.methods
       .contribute()
       .sender({ from: account, value: amount });
-
     window.location.reload();
-  } catch (e) {
-    reportError(e);
-    return e;
+  } catch (error) {
+    reportError(error);
+    return error;
   }
 };
 
 const getInfo = async () => {
   try {
-    if (!etherum)
-      return alert("Please install metamask extension in your browser");
+    if (!ethereum) return alert("please install Metamask");
 
-    const contract = await getEtherumContract();
+    const contract = await getEthereumContract();
     const connectedAccount = getGlobalState("connectedAccount");
-    const isStakeHolder = await contract.methods
-      .isStakeHolder()
+    const isStakeholder = await contract.methods
+      .isStakeholder()
       .call({ from: connectedAccount });
     const balance = await contract.methods.daoBalance().call();
     const myBalance = await contract.methods
       .getBalance()
       .call({ from: connectedAccount });
-
-    setGlobalState("balance", window.web3.utils.fromWei(balance));
+    setGlobalState("Balance", window.web3.utils.fromWei(balance));
     setGlobalState("myBalance", window.web3.utils.fromWei(myBalance));
-    setGlobalState("isStakeHolder", isStakeHolder);
-  } catch (e) {
-    reportError(e);
+    setGlobalState("isStakeholder", isStakeholder);
+  } catch (error) {
+    reportError(error);
   }
 };
 
 const raiseProposal = async ({ title, description, beneficiary, amount }) => {
   try {
     amount = window.web3.utils.toWei(amount.toString(), "ether");
-    const contract = await getEtherumContract();
+    const contract = await getEthereumContract();
     const account = getGlobalState("connectedAccount");
 
     await contract.methods
       .createProposal(title, description, beneficiary, amount)
       .send({ from: account });
-  } catch (e) {
-    reportError(e);
+
+    window.location.reload();
+  } catch (error) {
+    reportError(error);
   }
 };
 
 const getProposals = async () => {
   try {
-    if (!etherum)
-      return alert("Please install metamask extension in your browser");
-    const contract = await getEtherumContract();
+    if (!ethereum) return alert("Please install Metamask");
+
+    const contract = await getEthereumContract();
     const proposals = await contract.methods.getProposals().call();
     setGlobalState("proposals", structuredProposals(proposals));
-  } catch (e) {
-    reportError(e);
+  } catch (error) {
+    reportError(error);
   }
 };
 
@@ -147,47 +145,47 @@ const structuredProposals = (proposals) => {
 const getProposal = async (id) => {
   try {
     const proposals = getGlobalState("proposals");
-    return proposals.find((proposal) => proposal.id === id);
-  } catch (e) {
-    reportError(e);
+    return proposals.find((proposal) => proposal.id == id);
+  } catch (error) {
+    reportError(error);
   }
 };
-
 const voteOnProposal = async (proposalId, supported) => {
   try {
-    const contract = await getEtherumContract();
+    const contract = await getEthereumContract();
     const account = getGlobalState("connectedAccount");
-    await contract.methods.vote(proposalId, supported).send({ from: account });
+    await contract.methods.Vote(proposalId, supported).send({ from: account });
+
     window.location.reload();
-  } catch (e) {
-    reportError(e);
+  } catch (error) {
+    reportError(error);
   }
 };
 
 const listVoters = async (id) => {
   try {
-    const contract = await getEtherumContract();
+    const contract = await getEthereumContract();
     const votes = await contract.methods.getVotesOf(id).call();
     return votes;
-  } catch (e) {
-    reportError(e);
+  } catch (error) {
+    reportError(error);
   }
 };
 
 const payoutBeneficiary = async (id) => {
   try {
-    const contract = await getEtherumContract();
+    const contract = await getEthereumContract();
     const account = getGlobalState("connectedAccount");
     await contract.methods.payBeneficiary(id).send({ from: account });
     window.location.reload();
-  } catch (e) {
-    reportError(e);
+  } catch (error) {
+    reportError(error);
   }
 };
 
-const reportError = (e) => {
-  console.log(Json.stringify(e), "red");
-  throw new Error("No etherum object, something is wrong");
+const reportError = (error) => {
+  console.log(JSON.stringify(error), "red");
+  throw new Error("No ethereum object, something is wrong.");
 };
 
 export {
